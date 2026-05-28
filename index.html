@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Ciomas Hills Bogor - Hunian Premium di Perbukitan Ciomas. Booking mulai 1 juta, cicilan dari 2.5 juta. Lokasi strategis, lingkungan asri, fasilitas lengkap." />
+    <meta name="keywords" content="rumah bogor, perumahan premium, ciomas, hunian, properti, investasi" />
+    <meta name="theme-color" content="#040d04" />
+    
+    <!-- OG Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ciomas Hills Bogor - Hunian Premium" />
+    <meta property="og:description" content="Booking mulai 1 juta. Cicilan KPR fleksibel hingga 30 tahun." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80" />
+    
+    <title>Ciomas Hills Bogor - Hunian Premium</title>
+    
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #030a03;
+        color: #fff;
+        overflow-x: hidden;
+      }
+      #root {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      /* Loading skeleton */
+      @keyframes shimmer {
+        0% { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+      }
+      .skeleton {
+        background: linear-gradient(
+          90deg,
+          rgba(255,255,255,.05) 25%,
+          rgba(255,255,255,.1) 50%,
+          rgba(255,255,255,.05) 75%
+        );
+        background-size: 1000px 100%;
+        animation: shimmer 2s infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
