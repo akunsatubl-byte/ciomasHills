@@ -40,3 +40,9 @@ logs/
 .cache/
 temp/
 tmp/
+.env.*
+*.env
+credentials.json
+*.pem
+*.key
+.credentials
