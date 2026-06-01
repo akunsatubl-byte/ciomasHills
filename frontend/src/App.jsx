@@ -5,8 +5,8 @@ import { useState, useEffect, useCallback } from "react";
    Ganti VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY di .env.local
    Di sini pakai fallback dummy agar preview tetap jalan
 ════════════════════════════════════════════════════════════════ */
-const SUPABASE_URL  = typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL  || "";
-const SUPABASE_KEY  = typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY || "";
+const SUPABASE_URL  = (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) || "";
+const SUPABASE_KEY  = (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) || "";
 const HAS_SUPABASE  = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
 /* ── lightweight supabase fetch helper ── */
@@ -54,21 +54,8 @@ async function sbSignOut(token) {
   });
 }
 
-/* ── supabase storage upload ── */
-async function sbUpload(file, token) {
-  const ext  = file.name.split(".").pop();
-  const name = `${Date.now()}.${ext}`;
-  const res  = await fetch(`${SUPABASE_URL}/storage/v1/object/images/${name}`, {
-    method: "POST",
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, "Content-Type": file.type },
-    body: file,
-  });
-  if (!res.ok) throw new Error("Upload gagal");
-  return `${SUPABASE_URL}/storage/v1/object/public/images/${name}`;
-}
-
 /* ════════════════════════════════════════════════════════════════
-   ② FALLBACK DUMMY DATA
+   ② FALLBACK DUMMY DATA  (dipakai jika Supabase belum tersambung)
 ════════════════════════════════════════════════════════════════ */
 const FB = {
   settings: {
@@ -117,13 +104,18 @@ const FB = {
 function useData(fetchFn, fallback) {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
+  
   const load = useCallback(async () => {
     if (!HAS_SUPABASE) { setData(fallback); setLoading(false); return; }
     try { setData(await fetchFn()); }
     catch { setData(fallback); }
     finally { setLoading(false); }
-  }, []);
-  useEffect(() => { load(); }, [load]);
+  }, [fetchFn, fallback]);
+
+  useEffect(() => { 
+    load();
+  }, [load]);
+
   return { data: data ?? fallback, loading, refetch: load };
 }
 
@@ -140,7 +132,7 @@ function useSettings() {
 ════════════════════════════════════════════════════════════════ */
 const fmtRp    = n    => "Rp " + Number(n).toLocaleString("id-ID");
 const waLink   = (wa, msg) => `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
-const initials = name => name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+const initials = name => (name || "").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 const uid      = ()   => Math.random().toString(36).slice(2);
 
 /* ════════════════════════════════════════════════════════════════
@@ -180,7 +172,7 @@ const GStyle = () => (
 );
 
 /* ════════════════════════════════════════════════════════════════
-   ⑥ SHARED UI ATOMS (components used in multiple places)
+   ⑥ SHARED UI ATOMS
 ════════════════════════════════════════════════════════════════ */
 function SLabel({ children, color = "#2E7D32" }) {
   return <div style={{ fontWeight:700, fontSize:12, letterSpacing:2, color, textTransform:"uppercase", marginBottom:8 }}>{children}</div>;
@@ -211,7 +203,7 @@ function Btn({ href, onClick, children, bg, color="#fff", border, shadow, full, 
 }
 
 /* ════════════════════════════════════════════════════════════════
-   LOADER - Loading animation on page boot
+   ⑦ LOADER
 ════════════════════════════════════════════════════════════════ */
 function Loader() {
   return (
@@ -282,9 +274,9 @@ function Navbar({ wa }) {
   );
 }
 
-/* Continue with all other components... [HERO, ABOUT, GALLERY, etc.] */
-/* Due to length, importing from original app structure */
-
+/* ════════════════════════════════════════════════════════════════
+   ⑨ PUBLIC — HERO
+════════════════════════════════════════════════════════════════ */
 function Hero({ s }) {
   const [vis, setVis] = useState(false);
   useEffect(() => { const t = setTimeout(() => setVis(true), 200); return () => clearTimeout(t); }, []);
@@ -293,7 +285,7 @@ function Hero({ s }) {
     <section id="hero" style={{ position:"relative", minHeight:"100vh", display:"flex", alignItems:"center", overflow:"hidden" }}>
       <img src={s.hero_image_url} alt="hero" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
       <div style={{ position:"absolute", inset:0, background:"linear-gradient(120deg,rgba(3,12,3,.88),rgba(5,20,5,.72) 55%,rgba(0,0,0,.5))" }} />
-      <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(201,168,76,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,.04) 1px,transparent 1px)", backgroundSize:"80px 80px" }} />
+      <div style={{ position:"absolute", inset:0, backgroundImage:"gradient(rgba(201,168,76,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,.04) 1px,transparent 1px)", backgroundSize:"80px 80px" }} />
       <div style={{ position:"relative", zIndex:1, maxWidth:1200, margin:"0 auto", padding:"120px 28px 80px", width:"100%" }}>
         <div style={{ maxWidth:700 }}>
           <div style={{ ...fa(0), display:"inline-flex", alignItems:"center", gap:8, background:"rgba(201,168,76,.15)", border:"1px solid rgba(201,168,76,.35)", borderRadius:24, padding:"6px 16px", marginBottom:28 }}>
@@ -301,7 +293,7 @@ function Hero({ s }) {
             <span style={{ color:"#C9A84C", fontWeight:700, fontSize:12, letterSpacing:1.5 }}>PERUMAHAN PREMIUM · CIOMAS BOGOR</span>
           </div>
           <h1 style={{ ...fa(0.1), fontSize:"clamp(36px,5.5vw,68px)", fontWeight:900, color:"#fff", lineHeight:1.1, marginBottom:20, letterSpacing:-.5 }}>
-            {s.hero_title.replace("Ciomas Hills","")}{" "}
+            {(s.hero_title || "").replace("Ciomas Hills","")}{" "}
             <span style={{ background:"linear-gradient(135deg,#C9A84C,#f5d98a,#C9A84C)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundSize:"200%", animation:"shimmer 3s linear infinite" }}>
               Ciomas Hills
             </span>
@@ -337,9 +329,9 @@ function Hero({ s }) {
   );
 }
 
-// Placeholder for remaining components - they are extensive
-// In production, break these into separate component files
-
+/* ════════════════════════════════════════════════════════════════
+   ⑩ PUBLIC — ABOUT
+════════════════════════════════════════════════════════════════ */
 function About() {
   return (
     <section id="tentang" style={{ background:"#f0f7f0", padding:"100px 28px" }}>
@@ -356,7 +348,7 @@ function About() {
           </div>
           <div>
             <SLabel>Tentang Kami</SLabel>
-            <h2 style={{ fontSize:"clamp(26px,3.5vw,40px)", fontWeight:900, color:"#111", lineHeight:1.2, marginBottom:16 }}>Hunian Premium di Perbukitan Ciomas Bogor</h2>
+            <h2 style={{ fontSize:"clamp(26px,3.5vw,40px)", fontWeight:900, color:"#111", lineHeight:1.2, marginBottom:16 }}>Hunian Premium di<br />Perbukitan Ciomas Bogor</h2>
             <Divider />
             <p style={{ color:"#555", fontSize:16, lineHeight:1.85, marginBottom:24 }}>Ciomas Hills adalah kawasan perumahan premium yang dirancang untuk keluarga modern. Berlokasi di perbukitan Ciomas yang sejuk, hanya 10 menit dari pusat Kota Bogor dengan segala fasilitas lengkap.</p>
             {[["🌿","Lingkungan Asri","Dikelilingi pepohonan hijau dan udara segar khas Bogor"],["🏗️","Material Premium","Konstruksi berstandar SNI dengan material berkualitas terbaik"],["🔐","Keamanan 24 Jam","CCTV & security profesional menjaga ketenangan Anda"]].map(([ic,t,d]) => (
@@ -372,6 +364,9 @@ function About() {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════
+   ⑪ PUBLIC — GALLERY
+════════════════════════════════════════════════════════════════ */
 function Gallery({ items }) {
   const [idx, setIdx] = useState(0);
   const list = items.filter(i => i.is_active);
@@ -413,15 +408,29 @@ function Gallery({ items }) {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════
+   ⑫ PUBLIC — FEATURES
+════════════════════════════════════════════════════════════════ */
+const FEATS = [
+  { icon:"🏙️", t:"10 Menit ke Kota Bogor", d:"Dekat pusat kota, mal, rumah sakit, dan sekolah unggulan." },
+  { icon:"🛣️", t:"Akses Tol Langsung",      d:"Keluar Tol Jagorawi, tiba di perumahan tanpa macet." },
+  { icon:"💰", t:"Cicilan Mulai 2,5 Juta",  d:"KPR dengan 10+ bank partner, tenor fleksibel hingga 30 tahun." },
+  { icon:"🔑", t:"Booking Hanya 1 Juta",    d:"Amankan unit pilihan Anda dengan deposit sangat terjangkau." },
+  { icon:"🌿", t:"Lingkungan Hijau & Asri", d:"Didesain dengan ruang terbuka hijau, udara segar khas Bogor." },
+  { icon:"📈", t:"Investasi Menjanjikan",    d:"Nilai properti terus naik, potensi capital gain tinggi." },
+];
+function FCard({ icon, t, d }) {
+  const [h, setH] = useState(false);
+  return (
+    <div onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{ background:h?"#f0f7f0":"#f8fbf8", borderRadius:20, padding:"28px 24px", border:h?"1px solid #a5d6a7":"1px solid #e8f5e9", transform:h?"translateY(-8px)":"translateY(0)", transition:"all .3s" }}>
+      <div style={{ width:56, height:56, borderRadius:16, background:h?"linear-gradient(135deg,#2E7D32,#43a047)":"linear-gradient(135deg,#e8f5e9,#c8e6c8)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, marginBottom:16, transition:"all .3s" }}>{icon}</div>
+      <div style={{ fontWeight:800, fontSize:17, color:"#111", marginBottom:8 }}>{t}</div>
+      <div style={{ color:"#666", fontSize:14, lineHeight:1.7 }}>{d}</div>
+    </div>
+  );
+}
 function Features() {
-  const FEATS = [
-    { icon:"🏙️", t:"10 Menit ke Kota Bogor", d:"Dekat pusat kota, mal, rumah sakit, dan sekolah unggulan." },
-    { icon:"🛣️", t:"Akses Tol Langsung",      d:"Keluar Tol Jagorawi, tiba di perumahan tanpa macet." },
-    { icon:"💰", t:"Cicilan Mulai 2,5 Juta",  d:"KPR dengan 10+ bank partner, tenor fleksibel hingga 30 tahun." },
-    { icon:"🔑", t:"Booking Hanya 1 Juta",    d:"Amankan unit pilihan Anda dengan deposit sangat terjangkau." },
-    { icon:"🌿", t:"Lingkungan Hijau & Asri", d:"Didesain dengan ruang terbuka hijau, udara segar khas Bogor." },
-    { icon:"📈", t:"Investasi Menjanjikan",    d:"Nilai properti terus naik, potensi capital gain tinggi." },
-  ];
   return (
     <section id="keunggulan" style={{ background:"#fff", padding:"100px 28px" }}>
       <div style={{ maxWidth:1140, margin:"0 auto" }}>
@@ -438,37 +447,9 @@ function Features() {
   );
 }
 
-function FCard({ icon, t, d }) {
-  const [h, setH] = useState(false);
-  return (
-    <div onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ background:h?"#f0f7f0":"#f8fbf8", borderRadius:20, padding:"28px 24px", border:h?"1px solid #a5d6a7":"1px solid #e8f5e9", transform:h?"translateY(-8px)":"translateY(0)", transition:"all .3s" }}>
-      <div style={{ width:56, height:56, borderRadius:16, background:h?"linear-gradient(135deg,#2E7D32,#43a047)":"linear-gradient(135deg,#e8f5e9,#c8e6c8)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, marginBottom:16, transition:"all .3s" }}>{icon}</div>
-      <div style={{ fontWeight:800, fontSize:17, color:"#111", marginBottom:8 }}>{t}</div>
-      <div style={{ color:"#666", fontSize:14, lineHeight:1.7 }}>{d}</div>
-    </div>
-  );
-}
-
-function HouseTypes({ houses, wa }) {
-  const list = houses.filter(h => h.is_active);
-  if (!list.length) return null;
-  return (
-    <section id="tipe-rumah" style={{ background:"linear-gradient(160deg,#050f05,#0f2a0f)", padding:"100px 28px" }}>
-      <div style={{ maxWidth:1140, margin:"0 auto" }}>
-        <div style={{ textAlign:"center", marginBottom:56 }}>
-          <SLabel color="#C9A84C">Pilihan Unit</SLabel>
-          <h2 style={{ fontSize:"clamp(26px,3.5vw,42px)", fontWeight:900, color:"#fff", marginBottom:8 }}>Tipe Rumah Tersedia</h2>
-          <Divider center gold />
-        </div>
-        <div className="g3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:28 }}>
-          {list.map(h => <HCard key={h.id} h={h} wa={wa} />)}
-        </div>
-      </div>
-    </section>
-  );
-}
-
+/* ════════════════════════════════════════════════════════════════
+   ⑬ PUBLIC — HOUSE TYPES
+════════════════════════════════════════════════════════════════ */
 function HCard({ h, wa }) {
   const [hov, setHov] = useState(false);
   const bc = { Terlaris:"#C9A84C", "Best Value":"#2E7D32", Premium:"#1565C0" };
@@ -496,7 +477,28 @@ function HCard({ h, wa }) {
     </div>
   );
 }
+function HouseTypes({ houses, wa }) {
+  const list = houses.filter(h => h.is_active);
+  if (!list.length) return null;
+  return (
+    <section id="tipe-rumah" style={{ background:"linear-gradient(160deg,#050f05,#0f2a0f)", padding:"100px 28px" }}>
+      <div style={{ maxWidth:1140, margin:"0 auto" }}>
+        <div style={{ textAlign:"center", marginBottom:56 }}>
+          <SLabel color="#C9A84C">Pilihan Unit</SLabel>
+          <h2 style={{ fontSize:"clamp(26px,3.5vw,42px)", fontWeight:900, color:"#fff", marginBottom:8 }}>Tipe Rumah Tersedia</h2>
+          <Divider center gold />
+        </div>
+        <div className="g3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:28 }}>
+          {list.map(h => <HCard key={h.id} h={h} wa={wa} />)}
+        </div>
+      </div>
+    </section>
+  );
+}
 
+/* ════════════════════════════════════════════════════════════════
+   ⑭ PUBLIC — SIMULATION
+════════════════════════════════════════════════════════════════ */
 function Simulation({ houses }) {
   const opts = houses.filter(h => h.is_active && h.price_num > 0);
   const [pidx, setPidx] = useState(0);
@@ -535,9 +537,9 @@ function Simulation({ houses }) {
               <div>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
                   <label style={{ fontWeight:700, color:"#111", fontSize:14 }}>Uang Muka (DP)</label>
-                  <span style={{ fontWeight:700, color:"#2E7D32", fontSize:14 }}>{fmtRp(dp)} ({Math.round(dp/price*100)}%)</span>
+                  <span style={{ fontWeight:700, color:"#2E7D32", fontSize:14 }}>{fmtRp(dp)} ({price ? Math.round(dp/price*100) : 0}%)</span>
                 </div>
-                <input type="range" min={Math.round(price*.1)} max={Math.round(price*.5)} step={5000000} value={dp}
+                <input type="range" min={Math.round(price*.1) || 0} max={Math.round(price*.5) || 100000} step={5000000} value={dp}
                   onChange={e => setDp(Number(e.target.value))}
                   style={{ width:"100%", accentColor:"#2E7D32", height:6, cursor:"pointer" }} />
                 <div style={{ display:"flex", justifyContent:"space-between", color:"#bbb", fontSize:11, marginTop:4 }}><span>10%</span><span>50%</span></div>
@@ -577,6 +579,9 @@ function Simulation({ houses }) {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════
+   ⑮ PUBLIC — LOCATION
+════════════════════════════════════════════════════════════════ */
 function Location({ s }) {
   return (
     <section id="lokasi" style={{ background:"#fff", padding:"100px 28px" }}>
@@ -591,7 +596,7 @@ function Location({ s }) {
             <div style={{ fontSize:72 }}>🗺️</div>
             <div style={{ fontWeight:700, color:"#2E7D32", fontSize:18 }}>Ciomas, Bogor</div>
             <div style={{ color:"#4a7a4a", fontSize:14, textAlign:"center", padding:"0 24px" }}>{s.address}</div>
-            <a href="https://maps.google.com/?q=Ciomas+Bogor" target="_blank" rel="noreferrer"
+            <a href="https://maps.google.com" target="_blank" rel="noreferrer"
               style={{ marginTop:8, background:"#2E7D32", color:"#fff", padding:"10px 28px", borderRadius:24, fontWeight:700, fontSize:14 }}>
               📍 Buka Google Maps
             </a>
@@ -618,13 +623,16 @@ function Location({ s }) {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════
+   ⑯ PUBLIC — CTA BANNER
+════════════════════════════════════════════════════════════════ */
 function CTABanner({ wa }) {
   return (
     <section style={{ position:"relative", padding:"80px 28px", overflow:"hidden", background:"linear-gradient(135deg,#C9A84C,#a07830)" }}>
       <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle at 70% 50%,rgba(255,255,255,.12),transparent 50%)" }} />
       <div style={{ position:"relative", maxWidth:700, margin:"0 auto", textAlign:"center" }}>
         <div style={{ fontSize:52, marginBottom:14 }}>🔑</div>
-        <h2 style={{ fontWeight:900, fontSize:"clamp(24px,4vw,40px)", color:"#111", marginBottom:12, lineHeight:1.2 }}>Booking Rumah Impian Anda Cukup 1 Juta Rupiah!</h2>
+        <h2 style={{ fontWeight:900, fontSize:"clamp(24px,4vw,40px)", color:"#111", marginBottom:12, lineHeight:1.2 }}>Booking Rumah Impian Anda<br />Cukup 1 Juta Rupiah!</h2>
         <p style={{ color:"rgba(40,20,0,.65)", fontSize:16, marginBottom:32, lineHeight:1.75 }}>Unit terbatas! Jangan lewatkan kesempatan memiliki hunian premium di lokasi strategis.</p>
         <div style={{ display:"flex", gap:16, justifyContent:"center", flexWrap:"wrap" }}>
           <Btn href={waLink(wa,"Halo, saya ingin BOOKING Ciomas Hills sekarang!")} bg="#111" color="#C9A84C" shadow="rgba(0,0,0,.4)">🚀 Booking Sekarang</Btn>
@@ -635,6 +643,9 @@ function CTABanner({ wa }) {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════
+   ⑰ PUBLIC — TESTIMONIALS
+════════════════════════════════════════════════════════════════ */
 function Testimonials({ items }) {
   const [cur, setCur] = useState(0);
   const list = items.filter(i => i.is_active);
@@ -665,6 +676,9 @@ function Testimonials({ items }) {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════
+   ⑱ PUBLIC — FAQ
+════════════════════════════════════════════════════════════════ */
 function FAQ({ items }) {
   const [open, setOpen] = useState(null);
   const list = items.filter(i => i.is_active);
@@ -694,6 +708,9 @@ function FAQ({ items }) {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════
+   ⑲ PUBLIC — FOOTER
+════════════════════════════════════════════════════════════════ */
 function Footer({ s }) {
   const go = id => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
   return (
@@ -745,6 +762,9 @@ function Footer({ s }) {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════
+   ⑳ FLOATING BUTTONS
+════════════════════════════════════════════════════════════════ */
 function FloatingWA({ wa }) {
   const [vis, setVis] = useState(false);
   const [hov, setHov] = useState(false);
@@ -758,7 +778,6 @@ function FloatingWA({ wa }) {
     </a>
   );
 }
-
 function ScrollTopBtn() {
   const [vis, setVis] = useState(false);
   useEffect(() => {
@@ -775,17 +794,18 @@ function ScrollTopBtn() {
   );
 }
 
+/* ════════════════════════════════════════════════════════════════
+   ㉑ PUBLIC PAGE
+════════════════════════════════════════════════════════════════ */
 function PublicPage() {
   const [loading, setLoading] = useState(true);
-  const { settings } = useSettings();
-  const { data: houses } = useData(() => db.select("house_types","is_active=eq.true"), FB.houses);
-  const { data: gallery } = useData(() => db.select("gallery","is_active=eq.true"), FB.gallery);
-  const { data: testimonials } = useData(() => db.select("testimonials","is_active=eq.true"), FB.testimonials);
-  const { data: faqs } = useData(() => db.select("faqs","is_active=eq.true"), FB.faqs);
-
+  const { settings }                          = useSettings();
+  const { data: houses }                      = useData(() => db.select("house_types","is_active=eq.true"), FB.houses);
+  const { data: gallery }                     = useData(() => db.select("gallery","is_active=eq.true"), FB.gallery);
+  const { data: testimonials }                = useData(() => db.select("testimonials","is_active=eq.true"), FB.testimonials);
+  const { data: faqs }                        = useData(() => db.select("faqs","is_active=eq.true"), FB.faqs);
   useEffect(() => { const t = setTimeout(() => setLoading(false), 1800); return () => clearTimeout(t); }, []);
   const wa = settings.wa_number;
-
   return (
     <>
       {loading && <Loader />}
@@ -807,18 +827,621 @@ function PublicPage() {
   );
 }
 
-function useRoute() {
-  const [path, setPath] = useState(window.location.pathname);
-  useEffect(() => {
-    const fn = () => setPath(window.location.pathname);
-    window.addEventListener("popstate", fn);
-    return () => window.removeEventListener("popstate", fn);
-  }, []);
-  return path;
+/* ════════════════════════════════════════════════════════════════
+   ㉒ ADMIN — DESIGN TOKENS & HELPERS
+════════════════════════════════════════════════════════════════ */
+const AC = {
+  bg:"#040d04", sb:"#070f07", card:"#0d1f0d",
+  brd:"rgba(255,255,255,.06)", gold:"#C9A84C",
+  green:"#2E7D32", text:"#e0e0e0", muted:"#5a8a5a", lbl:"#7aaa7a",
+};
+const ainput   = { width:"100%", padding:"11px 14px", borderRadius:10, border:"1.5px solid rgba(255,255,255,.1)", background:"rgba(255,255,255,.04)", color:"#fff", fontSize:14 };
+const ata      = { ...ainput, resize:"vertical", minHeight:80, lineHeight:1.6 };
+const asel     = { ...ainput, cursor:"pointer" };
+const acard    = { background:AC.card, borderRadius:20, padding:24, border:`1px solid ${AC.brd}`, marginBottom:16 };
+const abtnG    = { background:"linear-gradient(135deg,#C9A84C,#e8c96a)", color:"#111", padding:"10px 22px", borderRadius:10, fontWeight:700, fontSize:14, border:"none", cursor:"pointer" };
+const abtnR    = { background:"rgba(220,38,38,.12)", border:"1px solid rgba(220,38,38,.25)", color:"#fca5a5", padding:"8px 14px", borderRadius:10, fontWeight:600, fontSize:13, cursor:"pointer" };
+const abtnGr   = { background:"rgba(255,255,255,.07)", border:"1px solid rgba(255,255,255,.12)", color:"#aaa", padding:"8px 14px", borderRadius:10, fontWeight:600, fontSize:13, cursor:"pointer" };
+const abtnTeal = { background:"rgba(46,125,50,.15)", border:"1px solid rgba(46,125,50,.3)", color:"#81c784", padding:"8px 14px", borderRadius:10, fontWeight:600, fontSize:13, cursor:"pointer" };
+const aok      = { background:"rgba(46,125,50,.15)", border:"1px solid rgba(46,125,50,.3)", borderRadius:10, padding:"12px 16px", color:"#81c784", fontSize:14, marginBottom:16 };
+const aerr     = { background:"rgba(220,38,38,.1)",  border:"1px solid rgba(220,38,38,.25)", borderRadius:10, padding:"12px 16px", color:"#fca5a5", fontSize:14, marginBottom:16 };
+
+function ABadge({ on }) {
+  return <span style={{ display:"inline-block", padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:700, background:on?"rgba(46,125,50,.2)":"rgba(100,100,100,.2)", color:on?"#4caf50":"#888" }}>{on?"Aktif":"Nonaktif"}</span>;
+}
+function AFlash({ msg }) { return msg ? <div style={msg.startsWith("✅")?aok:aerr}>{msg}</div> : null; }
+function AHdr({ title, sub }) {
+  return (
+    <div style={{ marginBottom:28 }}>
+      <h1 style={{ fontWeight:800, fontSize:24, color:"#fff", marginBottom:4 }}>{title}</h1>
+      <p style={{ color:AC.muted, fontSize:14 }}>{sub}</p>
+    </div>
+  );
+}
+function AField({ label, children }) {
+  return (
+    <div style={{ marginBottom:18 }}>
+      <label style={{ color:AC.lbl, fontSize:13, fontWeight:600, display:"block", marginBottom:6 }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+function useFlash() {
+  const [msg, setMsg] = useState("");
+  const flash = useCallback(t => { setMsg(t); setTimeout(() => setMsg(""), 3000); }, []);
+  return [msg, flash];
 }
 
+/* ════════════════════════════════════════════════════════════════
+   ㉓ ADMIN — LOGIN
+════════════════════════════════════════════════════════════════ */
+function AdminLogin({ onLogin }) {
+  const [email, setEmail]   = useState("");
+  const [pass,  setPass]    = useState("");
+  const [busy,  setBusy]    = useState(false);
+  const [err,   setErr]     = useState("");
+  const submit = async e => {
+    e.preventDefault(); setBusy(true); setErr("");
+    try {
+      if (HAS_SUPABASE) {
+        const data = await sbSignIn(email, pass);
+        onLogin({ email, token: data.access_token });
+      } else {
+        if (email === "admin@ciomashills.id" && pass === "admin123") {
+          await new Promise(r => setTimeout(r, 700));
+          onLogin({ email, token: "demo" });
+        } else throw new Error("Email atau password salah. Demo: admin@ciomashills.id / admin123");
+      }
+    } catch(e) { setErr(e.message); setBusy(false); }
+  };
+  return (
+    <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#030a03,#0a1a0a)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <div style={{ background:"rgba(255,255,255,.04)", border:"1px solid rgba(201,168,76,.2)", borderRadius:24, padding:"48px 40px", width:"100%", maxWidth:420 }}>
+        <div style={{ textAlign:"center", marginBottom:36 }}>
+          <div style={{ width:64, height:64, borderRadius:"50%", background:"linear-gradient(135deg,#C9A84C,#e8c96a)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#111", fontSize:24, margin:"0 auto 16px", animation:"spin 8s linear infinite" }}>CH</div>
+          <div style={{ fontWeight:800, color:"#fff", fontSize:22 }}>Admin Panel</div>
+          <div style={{ color:AC.muted, fontSize:14, marginTop:4 }}>Ciomas Hills Bogor</div>
+        </div>
+        {err && <div style={aerr}>⚠️ {err}</div>}
+        <form onSubmit={submit} style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          <AField label="Email Admin">
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="admin@ciomashills.id" style={ainput} />
+          </AField>
+          <AField label="Password">
+            <input type="password" value={pass} onChange={e=>setPass(e.target.value)} required placeholder="••••••••" style={ainput} />
+          </AField>
+          <button type="submit" disabled={busy} style={{ ...abtnG, padding:"14px", fontSize:15, marginTop:8, opacity:busy?.7:1, width:"100%" }}>
+            {busy ? "⏳ Masuk..." : "🔐 Masuk ke Dashboard"}
+          </button>
+        </form>
+        {!HAS_SUPABASE && <div style={{ textAlign:"center", marginTop:16, color:"#2a5a2a", fontSize:12 }}>Demo: admin@ciomashills.id / admin123</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ㉔ ADMIN — SIDEBAR
+════════════════════════════════════════════════════════════════ */
+const ANAV = [
+  { id:"home",     icon:"📊", label:"Dashboard"  },
+  { id:"houses",   icon:"🏠", label:"Tipe Rumah" },
+  { id:"gallery",  icon:"🖼️", label:"Galeri"     },
+  { id:"testi",    icon:"💬", label:"Testimoni"  },
+  { id:"faq",      icon:"❓", label:"FAQ"         },
+  { id:"settings", icon:"⚙️", label:"Pengaturan" },
+];
+function AdminSidebar({ page, onNav, user, onLogout }) {
+  return (
+    <aside className="admin-sb" style={{ width:240, background:AC.sb, borderRight:`1px solid ${AC.brd}`, display:"flex", flexDirection:"column", padding:"24px 14px", flexShrink:0 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:32, paddingLeft:6 }}>
+        <div style={{ width:38, height:38, borderRadius:"50%", background:"linear-gradient(135deg,#C9A84C,#e8c96a)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, color:"#111", fontSize:15, flexShrink:0 }}>CH</div>
+        <div>
+          <div className="sb-lbl" style={{ fontWeight:800, color:"#fff", fontSize:14 }}>Ciomas Hills</div>
+          <div className="sb-lbl" style={{ color:AC.muted, fontSize:11, letterSpacing:1 }}>ADMIN</div>
+        </div>
+      </div>
+      <nav style={{ flex:1, display:"flex", flexDirection:"column", gap:4 }}>
+        {ANAV.map(n => {
+          const on = page===n.id;
+          return (
+            <button key={n.id} onClick={() => onNav(n.id)}
+              style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 14px", borderRadius:12, border:on?"1px solid rgba(201,168,76,.3)":"1px solid transparent", background:on?"rgba(201,168,76,.15)":"transparent", color:on?AC.gold:AC.muted, fontWeight:600, fontSize:14, cursor:"pointer", width:"100%", textAlign:"left" }}>
+              <span style={{ fontSize:18, flexShrink:0 }}>{n.icon}</span>
+              <span className="sb-lbl">{n.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+      <div style={{ borderTop:`1px solid ${AC.brd}`, paddingTop:16, marginTop:16 }}>
+        <div className="sb-lbl" style={{ color:"#2a5a2a", fontSize:12, marginBottom:10, paddingLeft:6, wordBreak:"break-all" }}>👤 {user?.email}</div>
+        <button onClick={onLogout} style={{ ...abtnR, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+          🚪 <span className="sb-lbl">Keluar</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ㉕ ADMIN — DASHBOARD HOME
+════════════════════════════════════════════════════════════════ */
+function AHome({ onNav }) {
+  const { data: houses }  = useData(() => db.select("house_types",""), FB.houses);
+  const { data: gallery } = useData(() => db.select("gallery",""),     FB.gallery);
+  const { data: testi }   = useData(() => db.select("testimonials",""),FB.testimonials);
+  const { data: faqs }    = useData(() => db.select("faqs",""),        FB.faqs);
+  const stats = [
+    { icon:"🏠", label:"Tipe Rumah",  val:houses.length,  color:AC.gold,    pg:"houses"  },
+    { icon:"🖼️", label:"Foto Galeri", val:gallery.length, color:AC.green,   pg:"gallery" },
+    { icon:"💬", label:"Testimoni",   val:testi.length,   color:"#1565C0",  pg:"testi"   },
+    { icon:"❓", label:"FAQ",          val:faqs.length,    color:"#7B1FA2",  pg:"faq"     },
+  ];
+  return (
+    <div>
+      <AHdr title="👋 Selamat Datang, Admin!" sub="Kelola seluruh konten website Ciomas Hills dari sini." />
+      <div className="stat-g" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, marginBottom:24 }}>
+        {stats.map(s => (
+          <div key={s.label} onClick={() => onNav(s.pg)}
+            style={{ ...acard, marginBottom:0, textAlign:"center", cursor:"pointer", transition:"transform .2s" }}
+            onMouseEnter={e=>e.currentTarget.style.transform="translateY(-4px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
+            <div style={{ fontSize:34, marginBottom:8 }}>{s.icon}</div>
+            <div style={{ fontWeight:900, fontSize:30, color:s.color, lineHeight:1 }}>{s.val}</div>
+            <div style={{ color:AC.muted, fontSize:13, marginTop:6 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={acard}>
+        <div style={{ fontWeight:700, color:"#fff", fontSize:16, marginBottom:14 }}>⚡ Aksi Cepat</div>
+        <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+          {[["🏠","Tambah Unit","houses"],["🖼️","Upload Foto","gallery"],["⚙️","Pengaturan","settings"]].map(([ic,lb,pg]) => (
+            <button key={lb} onClick={() => onNav(pg)} style={abtnG}>{ic} {lb}</button>
+          ))}
+        </div>
+      </div>
+      <div style={acard}>
+        <div style={{ fontWeight:700, color:AC.gold, fontSize:14, marginBottom:12 }}>📋 Panduan</div>
+        {["Semua perubahan langsung tampil di website publik.",
+          "Upload gambar: maks 5MB, format JPG/PNG/WebP.",
+          "Nonaktifkan item agar tidak tampil tanpa harus dihapus.",
+          "Untuk ubah nomor WA/Instagram, masuk ke menu Pengaturan."].map(t => (
+          <div key={t} style={{ color:AC.muted, fontSize:14, marginBottom:8, paddingLeft:14, borderLeft:"2px solid #1a4a1a", lineHeight:1.5 }}>{t}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ㉖ ADMIN — HOUSE TYPES
+════════════════════════════════════════════════════════════════ */
+const EH = { name:"", lb:"", lt:"", price:"", price_num:"", badge:"", image_url:"", is_active:true, sort_order:0 };
+function AHouses({ token }) {
+  const [items, setItems] = useState(FB.houses);
+  const [form,  setForm]  = useState(EH);
+  const [edit,  setEdit]  = useState(null);
+  const [busy,  setBusy]  = useState(false);
+  const [msg,   flash]    = useFlash();
+  const sf = (k,v) => setForm(f => ({...f,[k]:v}));
+  useEffect(() => {
+    if (!HAS_SUPABASE) return;
+    db.select("house_types","").then(setItems).catch(() => {});
+  }, []);
+  const save = async () => {
+    if (!form.name||!form.price) return flash("❌ Nama dan harga wajib diisi.");
+    setBusy(true);
+    try {
+      if (HAS_SUPABASE) {
+        if (edit) { 
+          await db.update("house_types",edit,form);
+        } else { 
+          const r = await db.insert("house_types",form);
+          setItems(p => [...p, r[0]]); 
+        }
+        const fresh = await db.select("house_types",""); setItems(fresh);
+      } else {
+        if (edit) setItems(p => p.map(i => i.id===edit ? {...i,...form} : i));
+        else      setItems(p => [...p, {...form, id:uid()}]);
+      }
+      flash("✅ Tersimpan!"); setForm(EH);
+      setEdit(null);
+    } catch(e) { flash("❌ "+e.message); }
+    finally { setBusy(false); }
+  };
+  const del = async id => {
+    if (!confirm("Hapus tipe rumah ini?")) return;
+    if (HAS_SUPABASE) await db.delete("house_types",id);
+    setItems(p => p.filter(i => i.id!==id)); flash("✅ Dihapus.");
+  };
+  const toggle = async (id, val) => {
+    if (HAS_SUPABASE) await db.update("house_types",id,{is_active:val});
+    setItems(p => p.map(i => i.id===id ? {...i,is_active:val} : i));
+  };
+  return (
+    <div>
+      <AHdr title="🏠 Tipe Rumah" sub={`${items.length} tipe tersimpan`} />
+      <AFlash msg={msg} />
+      <div style={acard}>
+        <div style={{ fontWeight:700, color:"#fff", marginBottom:16 }}>{edit?"✏️ Edit":"➕ Tambah"} Tipe Rumah</div>
+        <div className="g2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 24px" }}>
+          <AField label="Nama Tipe *"><input value={form.name} onChange={e=>sf("name",e.target.value)} placeholder="Tipe 45/90" style={ainput} /></AField>
+          <AField label="Badge">
+            <select value={form.badge} onChange={e=>sf("badge",e.target.value)} style={asel}>
+              <option value="">— Pilih —</option>
+              {["Terlaris","Best Value","Premium","Baru"].map(b=><option key={b} value={b}>{b}</option>)}
+            </select>
+          </AField>
+          <AField label="Luas Bangunan *"><input value={form.lb} onChange={e=>sf("lb",e.target.value)} placeholder="45 m²" style={ainput} /></AField>
+          <AField label="Luas Tanah *"><input value={form.lt} onChange={e=>sf("lt",e.target.value)} placeholder="90 m²" style={ainput} /></AField>
+          <AField label="Harga (teks) *"><input value={form.price} onChange={e=>sf("price",e.target.value)} placeholder="Rp 490 Juta" style={ainput} /></AField>
+          <AField label="Harga (angka)"><input type="number" value={form.price_num} onChange={e=>sf("price_num",e.target.value)} placeholder="490000000" style={ainput} /></AField>
+          <AField label="URL Foto"><input value={form.image_url} onChange={e=>sf("image_url",e.target.value)} placeholder="https://..." style={ainput} /></AField>
+          <AField label="Urutan"><input type="number" value={form.sort_order} onChange={e=>sf("sort_order",Number(e.target.value))} style={{...ainput,width:80}} /></AField>
+        </div>
+        {form.image_url && <img src={form.image_url} alt="" style={{ width:120, height:90, objectFit:"cover", borderRadius:10, marginBottom:14 }} />}
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={save} disabled={busy} style={{...abtnG,opacity:busy?.7:1}}>{busy?"⏳...":"💾 Simpan"}</button>
+          {edit && <button onClick={()=>{setForm(EH);setEdit(null);}} style={abtnGr}>Batal</button>}
+        </div>
+      </div>
+      {items.map(h => (
+        <div key={h.id} style={{...acard, display:"flex", alignItems:"center", gap:16, flexWrap:"wrap"}}>
+          {h.image_url && <img src={h.image_url} alt={h.name} style={{ width:88, height:64, objectFit:"cover", borderRadius:10, flexShrink:0 }} />}
+          <div style={{ flex:1, minWidth:160 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
+              <span style={{ fontWeight:700, color:"#fff", fontSize:16 }}>{h.name}</span>
+              {h.badge && <span style={{ background:"#C9A84C22", color:AC.gold, fontSize:11, fontWeight:700, padding:"2px 10px", borderRadius:20 }}>{h.badge}</span>}
+              <ABadge on={h.is_active} />
+            </div>
+            <div style={{ color:AC.muted, fontSize:13 }}>LB: {h.lb} · LT: {h.lt} · {h.price}</div>
+          </div>
+          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+            <button onClick={()=>toggle(h.id,!h.is_active)} style={abtnTeal}>{h.is_active?"🔕":"👁️"}</button>
+            <button onClick={()=>{setForm({...h});setEdit(h.id);window.scrollTo({top:0,behavior:"smooth"});}} style={abtnGr}>✏️</button>
+            <button onClick={()=>del(h.id)} style={abtnR}>🗑️</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ㉗ ADMIN — GALLERY
+════════════════════════════════════════════════════════════════ */
+function AGallery({ token }) {
+  const [items, setItems] = useState(FB.gallery);
+  const [label, setLabel] = useState("");
+  const [url,   setUrl]   = useState("");
+  const [busy,  setBusy]  = useState(false);
+  const [msg,   flash]    = useFlash();
+  useEffect(() => {
+    if (!HAS_SUPABASE) return;
+    db.select("gallery","").then(setItems).catch(()=>{});
+  }, []);
+  const add = async () => {
+    if (!label||!url) return flash("❌ Label dan URL wajib diisi.");
+    setBusy(true);
+    try {
+      const payload = { label, image_url:url, is_active:true, sort_order:items.length+1 };
+      if (HAS_SUPABASE) { await db.insert("gallery",payload); const f=await db.select("gallery",""); setItems(f); }
+      else setItems(p => [...p, {...payload, id:uid()}]);
+      flash("✅ Foto ditambahkan!"); setLabel(""); setUrl("");
+    } catch(e) { flash("❌ "+e.message); }
+    finally { setBusy(false); }
+  };
+  const del = async id => {
+    if (!confirm("Hapus foto?")) return;
+    if (HAS_SUPABASE) await db.delete("gallery",id);
+    setItems(p => p.filter(i => i.id!==id)); flash("✅ Dihapus.");
+  };
+  const toggle = async (id, val) => {
+    if (HAS_SUPABASE) await db.update("gallery",id,{is_active:val});
+    setItems(p => p.map(i => i.id===id ? {...i,is_active:val} : i));
+  };
+  return (
+    <div>
+      <AHdr title="🖼️ Galeri Foto" sub={`${items.length} foto tersimpan`} />
+      <AFlash msg={msg} />
+      <div style={acard}>
+        <div style={{ fontWeight:700, color:"#fff", marginBottom:14 }}>➕ Tambah Foto</div>
+        <div className="g2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 24px" }}>
+          <AField label="Label *"><input value={label} onChange={e=>setLabel(e.target.value)} placeholder="Eksterior Mewah" style={ainput} /></AField>
+          <AField label="URL Foto *"><input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://..." style={ainput} /></AField>
+        </div>
+        {url && <img src={url} alt="" style={{ width:160, height:110, objectFit:"cover", borderRadius:10, marginBottom:14 }} />}
+        <button onClick={add} disabled={busy} style={{...abtnG,opacity:busy?.7:1}}>{busy?"⏳...":"💾 Tambah"}</button>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:14 }}>
+        {items.map(it => (
+          <div key={it.id} style={{...acard, padding:0, overflow:"hidden", marginBottom:0}}>
+            <div style={{ position:"relative" }}>
+              <img src={it.image_url} alt={it.label} style={{ width:"100%", aspectRatio:"4/3", objectFit:"cover" }} />
+              <div style={{ position:"absolute", top:8, left:8 }}><ABadge on={it.is_active} /></div>
+            </div>
+            <div style={{ padding:"12px 14px" }}>
+              <div style={{ fontWeight:600, color:"#fff", fontSize:14, marginBottom:10 }}>{it.label}</div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={()=>toggle(it.id,!it.is_active)} style={abtnTeal}>{it.is_active?"🔕":"👁️"}</button>
+                <button onClick={()=>del(it.id)} style={abtnR}>🗑️ Hapus</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ㉘ ADMIN — TESTIMONIALS
+════════════════════════════════════════════════════════════════ */
+const ET = { name:"", location:"", stars:5, text:"", is_active:true };
+function ATesti() {
+  const [items, setItems] = useState(FB.testimonials);
+  const [form,  setForm]  = useState(ET);
+  const [edit,  setEdit]  = useState(null);
+  const [busy,  setBusy]  = useState(false);
+  const [msg,   flash]    = useFlash();
+  const sf = (k,v) => setForm(f=>({...f,[k]:v}));
+  useEffect(() => {
+    if (!HAS_SUPABASE) return;
+    db.select("testimonials","").then(setItems).catch(()=>{});
+  }, []);
+  const save = async () => {
+    if (!form.name||!form.text) return flash("❌ Nama dan ulasan wajib diisi.");
+    setBusy(true);
+    try {
+      if (HAS_SUPABASE) {
+        if (edit) await db.update("testimonials",edit,form);
+        else await db.insert("testimonials",form);
+        const f = await db.select("testimonials",""); setItems(f);
+      } else {
+        if (edit) setItems(p=>p.map(i=>i.id===edit?{...i,...form}:i));
+        else setItems(p=>[...p,{...form,id:uid()}]);
+      }
+      flash("✅ Tersimpan!"); setForm(ET); setEdit(null);
+    } catch(e) { flash("❌ "+e.message); }
+    finally { setBusy(false); }
+  };
+  const del = async id => {
+    if (!confirm("Hapus?")) return;
+    if (HAS_SUPABASE) await db.delete("testimonials",id);
+    setItems(p=>p.filter(i=>i.id!==id)); flash("✅ Dihapus.");
+  };
+  const toggle = async (id,val) => {
+    if (HAS_SUPABASE) await db.update("testimonials",id,{is_active:val});
+    setItems(p=>p.map(i=>i.id===id?{...i,is_active:val}:i));
+  };
+  return (
+    <div>
+      <AHdr title="💬 Testimoni" sub={`${items.length} ulasan`} />
+      <AFlash msg={msg} />
+      <div style={acard}>
+        <div style={{ fontWeight:700, color:"#fff", marginBottom:14 }}>{edit?"✏️ Edit":"➕ Tambah"} Testimoni</div>
+        <div className="g2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 24px" }}>
+          <AField label="Nama *"><input value={form.name} onChange={e=>sf("name",e.target.value)} placeholder="Nama pembeli" style={ainput} /></AField>
+          <AField label="Kota"><input value={form.location} onChange={e=>sf("location",e.target.value)} placeholder="Jakarta" style={ainput} /></AField>
+        </div>
+        <AField label="Bintang">
+          <div style={{ display:"flex", gap:6 }}>
+            {[1,2,3,4,5].map(n => (
+              <button key={n} onClick={()=>sf("stars",n)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", opacity:n<=form.stars?1:.3, transition:"opacity .2s" }}>⭐</button>
+            ))}
+            <span style={{ color:AC.muted, fontSize:14, alignSelf:"center", marginLeft:6 }}>{form.stars} bintang</span>
+          </div>
+        </AField>
+        <AField label="Ulasan *"><textarea value={form.text} onChange={e=>sf("text",e.target.value)} placeholder="Isi ulasan..." style={ata} /></AField>
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={save} disabled={busy} style={{...abtnG,opacity:busy?.7:1}}>{busy?"⏳...":"💾 Simpan"}</button>
+          {edit && <button onClick={()=>{setForm(ET);setEdit(null);}} style={abtnGr}>Batal</button>}
+        </div>
+      </div>
+      {items.map(t => (
+        <div key={t.id} style={{...acard, display:"flex", gap:14, alignItems:"flex-start"}}>
+          <div style={{ width:46, height:46, borderRadius:"50%", background:"linear-gradient(135deg,#C9A84C,#e8c96a)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, color:"#111", fontSize:16, flexShrink:0 }}>
+            {initials(t.name)}
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
+              <span style={{ fontWeight:700, color:"#fff" }}>{t.name}</span>
+              <span style={{ color:AC.gold, fontSize:13 }}>{"⭐".repeat(t.stars)}</span>
+              <ABadge on={t.is_active} />
+            </div>
+            <div style={{ color:AC.muted, fontSize:12, marginBottom:4 }}>📍 {t.location}</div>
+            <div style={{ color:"#9aba9a", fontSize:14, lineHeight:1.6 }}>{t.text}</div>
+          </div>
+          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+            <button onClick={()=>toggle(t.id,!t.is_active)} style={abtnTeal}>{t.is_active?"🔕":"👁️"}</button>
+            <button onClick={()=>{setForm({...t});setEdit(t.id);}} style={abtnGr}>✏️</button>
+            <button onClick={()=>del(t.id)} style={abtnR}>🗑️</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ㉙ ADMIN — FAQ
+════════════════════════════════════════════════════════════════ */
+const EF = { question:"", answer:"", sort_order:0, is_active:true };
+function AFAQ() {
+  const [items, setItems] = useState(FB.faqs);
+  const [form,  setForm]  = useState(EF);
+  const [edit,  setEdit]  = useState(null);
+  const [busy,  setBusy]  = useState(false);
+  const [msg,   flash]    = useFlash();
+  const sf = (k,v) => setForm(f=>({...f,[k]:v}));
+  useEffect(() => {
+    if (!HAS_SUPABASE) return;
+    db.select("faqs","").then(setItems).catch(()=>{});
+  }, []);
+  const save = async () => {
+    if (!form.question||!form.answer) return flash("❌ Pertanyaan dan jawaban wajib diisi.");
+    setBusy(true);
+    try {
+      if (HAS_SUPABASE) {
+        if (edit) await db.update("faqs",edit,form);
+        else await db.insert("faqs",form);
+        const f = await db.select("faqs",""); setItems(f);
+      } else {
+        if (edit) setItems(p=>p.map(i=>i.id===edit?{...i,...form}:i));
+        else setItems(p=>[...p,{...form,id:uid()}]);
+      }
+      flash("✅ Tersimpan!"); setForm(EF); setEdit(null);
+    } catch(e) { flash("❌ "+e.message); }
+    finally { setBusy(false); }
+  };
+  const del = async id => {
+    if (!confirm("Hapus FAQ?")) return;
+    if (HAS_SUPABASE) await db.delete("faqs",id);
+    setItems(p=>p.filter(i => i.id!==id));
+    flash("✅ Dihapus.");
+  };
+  const toggle = async (id,val) => {
+    if (HAS_SUPABASE) await db.update("faqs",id,{is_active:val});
+    setItems(p=>p.map(i=>i.id===id?{...i,is_active:val}:i));
+  };
+  return (
+    <div>
+      <AHdr title="❓ FAQ" sub={`${items.length} pertanyaan`} />
+      <AFlash msg={msg} />
+      <div style={acard}>
+        <div style={{ fontWeight:700, color:"#fff", marginBottom:14 }}>{edit?"✏️ Edit":"➕ Tambah"} FAQ</div>
+        <AField label="Pertanyaan *"><input value={form.question} onChange={e=>sf("question",e.target.value)} placeholder="Pertanyaan umum..." style={ainput} /></AField>
+        <AField label="Jawaban *"><textarea value={form.answer} onChange={e=>sf("answer",e.target.value)} placeholder="Jawaban lengkap..." style={ata} /></AField>
+        <AField label="Urutan"><input type="number" value={form.sort_order} onChange={e=>sf("sort_order",Number(e.target.value))} style={{...ainput,width:80}} /></AField>
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={save} disabled={busy} style={{...abtnG,opacity:busy?.7:1}}>{busy?"⏳...":"💾 Simpan"}</button>
+          {edit && <button onClick={()=>{setForm(EF);setEdit(null);}} style={abtnGr}>Batal</button>}
+        </div>
+      </div>
+      {items.map((f,i) => (
+        <div key={f.id} style={{...acard, display:"flex", gap:12, alignItems:"flex-start"}}>
+          <div style={{ width:30, height:30, borderRadius:8, background:"rgba(201,168,76,.15)", display:"flex", alignItems:"center", justifyContent:"center", color:AC.gold, fontWeight:700, fontSize:13, flexShrink:0 }}>{i+1}</div>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6, flexWrap:"wrap" }}>
+              <span style={{ fontWeight:700, color:"#fff" }}>{f.question}</span>
+              <ABadge on={f.is_active} />
+            </div>
+            <div style={{ color:"#7aaa7a", fontSize:14, lineHeight:1.6 }}>{f.answer}</div>
+          </div>
+          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+            <button onClick={()=>toggle(f.id,!f.is_active)} style={abtnTeal}>{f.is_active?"🔕":"👁️"}</button>
+            <button onClick={()=>{setForm({...f});setEdit(f.id);}} style={abtnGr}>✏️</button>
+            <button onClick={()=>del(f.id)} style={abtnR}>🗑️</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ㉚ ADMIN — SETTINGS
+════════════════════════════════════════════════════════════════ */
+function ASettings() {
+  const [form,  setForm]  = useState({...FB.settings});
+  const [busy,  setBusy]  = useState(false);
+  const [msg,   flash]    = useFlash();
+  const sf = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  useEffect(() => {
+    if (!HAS_SUPABASE) return;
+    db.settings().then(rows => {
+      if (rows.length) setForm(Object.fromEntries(rows.map(r=>[r.key,r.value])));
+    }).catch(()=>{});
+  }, []);
+  const save = async () => {
+    setBusy(true);
+    try {
+      if (HAS_SUPABASE) {
+        await Promise.all(Object.entries(form).map(([k,v]) => db.updateSetting(k,v)));
+      }
+      flash("✅ Pengaturan berhasil disimpan!");
+    } catch(e) { flash("❌ "+e.message); }
+    finally { setBusy(false); }
+  };
+  const F = (k,lbl,type="text",ph="") => (
+    <AField key={k} label={lbl}>
+      <input type={type} value={form[k]||""} onChange={e=>sf(k,e.target.value)} placeholder={ph} style={ainput} />
+    </AField>
+  );
+  return (
+    <div>
+      <AHdr title="⚙️ Pengaturan Website" sub="Ubah info kontak, teks hero, dan konfigurasi global." />
+      <AFlash msg={msg} />
+      <div className="g2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:20 }}>
+        <div style={acard}>
+          <div style={{ fontWeight:700, color:AC.gold, marginBottom:18, fontSize:15 }}>📞 Informasi Kontak</div>
+          {F("site_name",  "Nama Website",       "text",  "Ciomas Hills Bogor")}
+          {F("tagline",    "Tagline",             "text",  "Hunian Premium...")}
+          {F("wa_number",  "Nomor WhatsApp",      "tel",   "628...")}
+          {F("instagram",  "Username Instagram",  "text",  "ciomashills")}
+          {F("email",      "Email Marketing",     "email", "marketing@...")}
+          {F("address",    "Alamat",              "text",  "Jl. Ciomas...")}
+        </div>
+        <div style={acard}>
+          <div style={{ fontWeight:700, color:AC.gold, marginBottom:18, fontSize:15 }}>🖼️ Hero Section</div>
+          {F("hero_title",    "Judul Hero",           "text", "Rumah Impian di...")}
+          <AField label="Subjudul Hero">
+            <textarea value={form.hero_subtitle||""} onChange={e=>sf("hero_subtitle",e.target.value)} style={ata} placeholder="Deskripsi singkat..." />
+          </AField>
+          {F("hero_image_url","URL Foto Hero",         "text", "https://...")}
+          {form.hero_image_url && (
+            <img src={form.hero_image_url} alt="" style={{ width:"100%", borderRadius:12, aspectRatio:"16/6", objectFit:"cover", marginTop:8 }} />
+          )}
+        </div>
+      </div>
+      <button onClick={save} disabled={busy} style={{...abtnG, padding:"14px 40px", fontSize:15, opacity:busy?.7:1}}>
+        {busy ? "⏳ Menyimpan..." : "💾 Simpan Semua Pengaturan"}
+      </button>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ㉛ ADMIN SHELL
+════════════════════════════════════════════════════════════════ */
+function AdminShell({ user, onLogout }) {
+  const [page, setPage] = useState("home");
+  const pages = {
+    home:     <AHome onNav={setPage} />,
+    houses:   <AHouses token={user.token} />,
+    gallery:  <AGallery token={user.token} />,
+    testi:    <ATesti />,
+    faq:      <AFAQ />,
+    settings: <ASettings />,
+  };
+  return (
+    <div style={{ display:"flex", minHeight:"100vh", background:AC.bg }}>
+      <AdminSidebar page={page} onNav={setPage} user={user} onLogout={onLogout} />
+      <main className="admin-main" style={{ flex:1, overflowY:"auto", padding:"32px 36px", maxHeight:"100vh" }}>
+        <div style={{ maxWidth:1100 }} key={page}>{pages[page] || pages.home}</div>
+      </main>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ㉜ ROUTER — simple hash-based router for safe deployment
+════════════════════════════════════════════════════════════════ */
+function useRoute() {
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const fn = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", fn);
+    return () => window.removeEventListener("hashchange", fn);
+  }, []);
+  return hash;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ㉝ APP ROOT
+════════════════════════════════════════════════════════════════ */
 export default function App() {
-  const path = useRoute();
+  const hash = useRoute();
   const [adminUser, setAdminUser] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem("ch_admin") || "null"); } catch { return null; }
   });
@@ -827,6 +1450,7 @@ export default function App() {
     sessionStorage.setItem("ch_admin", JSON.stringify(user));
     setAdminUser(user);
   };
+
   const handleLogout = async () => {
     if (HAS_SUPABASE && adminUser?.token && adminUser.token !== "demo") {
       await sbSignOut(adminUser.token).catch(()=>{});
@@ -835,12 +1459,17 @@ export default function App() {
     setAdminUser(null);
   };
 
-  const isAdmin = path.startsWith("/admin");
+  const isAdmin = hash.startsWith("#/admin");
 
   return (
     <>
       <GStyle />
-      {isAdmin ? <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh", background:"#030a03", color:"#fff" }}>Admin panel - setup kompleksitas tinggi, masuk via '/admin'</div> : <PublicPage />}
+      {isAdmin
+        ? adminUser
+          ? <AdminShell user={adminUser} onLogout={handleLogout} />
+          : <AdminLogin onLogin={handleLogin} />
+        : <PublicPage />
+      }
     </>
   );
 }
